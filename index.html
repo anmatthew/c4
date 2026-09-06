@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connect 4</title>
+  <style>
+    :root {
+      --ink: #eaf3ff;
+      --muted: #b9cbe0;
+      --board: #1c4f9c;
+      --board-dark: #12356d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: radial-gradient(ellipse at top, #163052 0%, #0b1522 55%, #070d14 100%);
+    }
+    .wrap { width: min(94vw, 520px); padding: 18px 16px 22px; }
+    h1 {
+      margin: 0 0 4px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: 22px;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    .panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+    }
+    .score { display: flex; gap: 14px; font-size: 14px; }
+    .chip { display: flex; align-items: center; gap: 7px; }
+    .mini { width: 13px; height: 13px; border-radius: 50%; }
+    .mini.r { background: radial-gradient(circle at 30% 30%, #ff8a7a, #c62828); }
+    .mini.y { background: radial-gradient(circle at 30% 30%, #ffe58a, #f9a825); }
+    #status { font-size: 13px; color: #d7e8ff; }
+    .board-frame {
+      padding: 14px;
+      border-radius: 18px;
+      background: linear-gradient(160deg, #2f6fbe, #163e7c 55%, #102e5c);
+      box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22);
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      aspect-ratio: 7 / 6;
+      gap: 6px;
+    }
+    .cell {
+      position: relative;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #0b1a30, #071018);
+      box-shadow: inset 0 6px 10px rgba(0,0,0,.45), 0 0 0 3px rgba(10, 40, 90, .35);
+      cursor: pointer;
+    }
+    .cell:hover { outline: 2px solid rgba(255,255,255,.28); outline-offset: 1px; }
+    .disc {
+      position: absolute;
+      inset: 6%;
+      border-radius: 50%;
+    }
+    .disc.red {
+      background: radial-gradient(circle at 32% 28%, #ff8f80 0%, #e53935 42%, #8e1c1c 78%);
+      box-shadow: inset 0 -6px 10px rgba(0,0,0,.35), 0 4px 7px rgba(0,0,0,.35);
+    }
+    .disc.yellow {
+      background: radial-gradient(circle at 32% 28%, #fff3b0 0%, #fdd835 42%, #c49000 78%);
+      box-shadow: inset 0 -6px 10px rgba(0,0,0,.2), 0 4px 7px rgba(0,0,0,.28);
+    }
+    .disc.drop { animation: drop .28s ease-out; }
+    @keyframes drop {
+      0% { transform: translateY(-180%); }
+      100% { transform: translateY(0); }
+    }
+    .cell.win .disc { box-shadow: 0 0 0 3px #fff, 0 0 14px rgba(255,255,255,.7); }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    button, select {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font: 13px/1.2 Georgia, serif;
+      cursor: pointer;
+    }
+    button {
+      background: linear-gradient(#4c8fe3, #2b63b5);
+      color: #fff;
+      box-shadow: 0 3px 0 #1a3f78;
+    }
+    button:hover { filter: brightness(1.06); }
+    button:disabled { opacity: .45; cursor: default; filter: none; }
+    select {
+      background: #17324f;
+      color: var(--ink);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    #msg {
+      min-height: 1.2em;
+      margin-top: 10px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Connect 4</h1>
+    <div class="subtitle">You are Red · computer is Yellow</div>
+    <div class="panel">
+      <div class="score">
+        <span class="chip"><span class="mini r"></span> Red</span>
+        <span class="chip"><span class="mini y"></span> Yellow</span>
+      </div>
+      <div id="status">Red to move</div>
+    </div>
+    <div class="board-frame"><div id="board"></div></div>
+    <div class="controls">
+      <select id="level">
+        <option value="easy">Level: Easy</option>
+        <option value="medium" selected>Level: Medium</option>
+        <option value="hard">Level: Hard</option>
+      </select>
+      <button type="button" id="undo">Undo</button>
+      <button type="button" id="share" disabled>Share</button>
+      <button type="button" id="restart">Restart</button>
+    </div>
+    <div id="msg">Click a column to drop a disc.</div>
+  </div>
+
+  <script>
+    (function () {
+      var ROWS = 6, COLS = 7;
+      var RED = 1, YELLOW = 2;
+      var ORDER = [3, 2, 4, 1, 5, 0, 6];
+
+      var board, current, gameOver, cells, history, winning, busy;
+
+      var elBoard = document.getElementById("board");
+      var elStatus = document.getElementById("status");
+      var elMsg = document.getElementById("msg");
+      var elUndo = document.getElementById("undo");
+      var elShare = document.getElementById("share");
+      var elLevel = document.getElementById("level");
+
+      function emptyBoard() {
+        var b = [];
+        for (var r = 0; r < ROWS; r++) {
+          b[r] = [];
+          for (var c = 0; c < COLS; c++) b[r][c] = 0;
+        }
+        return b;
+      }
+
+      function copyBoard(b) {
+        var n = [];
+        for (var r = 0; r < ROWS; r++) n[r] = b[r].slice();
+        return n;
+      }
+
+      function dropRow(b, c) {
+        for (var r = ROWS - 1; r >= 0; r--) if (b[r][c] === 0) return r;
+        return -1;
+      }
+
+      function legalCols(b) {
+        var cols = [];
+        for (var c = 0; c < COLS; c++) if (b[0][c] === 0) cols.push(c);
+        return cols;
+      }
+
+      function place(b, c, p) {
+        var r = dropRow(b, c);
+        if (r < 0) return null;
+        var next = copyBoard(b);
+        next[r][c] = p;
+        return { board: next, r: r, c: c };
+      }
+
+      function lineWinner(b) {
+        var r, c, i, p;
+        for (r = 0; r < ROWS; r++) {
+          for (c = 0; c < COLS; c++) {
+            p = b[r][c];
+            if (!p) continue;
+            if (c + 3 < COLS && b[r][c+1] === p && b[r][c+2] === p && b[r][c+3] === p)
+              return { player: p, cells: [[r,c],[r,c+1],[r,c+2],[r,c+3]] };
+            if (r + 3 < ROWS && b[r+1][c] === p && b[r+2][c] === p && b[r+3][c] === p)
+              return { player: p, cells: [[r,c],[r+1,c],[r+2,c],[r+3,c]] };
+            if (r + 3 < ROWS && c + 3 < COLS && b[r+1][c+1] === p && b[r+2][c+2] === p && b[r+3][c+3] === p)
+              return { player: p, cells: [[r,c],[r+1,c+1],[r+2,c+2],[r+3,c+3]] };
+            if (r + 3 < ROWS && c - 3 >= 0 && b[r+1][c-1] === p && b[r+2][c-2] === p && b[r+3][c-3] === p)
+              return { player: p, cells: [[r,c],[r+1,c-1],[r+2,c-2],[r+3,c-3]] };
+          }
+        }
+        return null;
+      }
+
+      function isFull(b) { return legalCols(b).length === 0; }
+
+      function snapshot() {
+        history.push({
+          board: copyBoard(board),
+          current: current,
+          gameOver: gameOver,
+          winning: winning ? winning.slice() : null,
+          msg: elMsg.innerHTML
+        });
+        elUndo.disabled = history.length === 0;
+      }
+
+      function scoreWindow(vals, p) {
+        var mine = 0, opp = 0, empty = 0, i;
+        for (i = 0; i < 4; i++) {
+          if (vals[i] === p) mine++;
+          else if (vals[i] === 3 - p) opp++;
+          else empty++;
+        }
+        if (mine === 4) return 100000;
+        if (opp === 4) return -100000;
+        if (mine === 3 && empty === 1) return 80;
+        if (mine === 2 && empty === 2) return 8;
+        if (opp === 3 && empty === 1) return -90;
+        if (opp === 2 && empty === 2) return -6;
+        return 0;
+      }
+
+      function evaluate(b, p) {
+        var score = 0, r, c, i, w;
+        for (r = 0; r < ROWS; r++) if (b[r][3] === p) score += 6;
+        for (r = 0; r < ROWS; r++) {
+          for (c = 0; c < COLS - 3; c++) {
+            w = [b[r][c], b[r][c+1], b[r][c+2], b[r][c+3]];
+            score += scoreWindow(w, p);
+          }
+        }
+        for (c = 0; c < COLS; c++) {
+          for (r = 0; r < ROWS - 3; r++) {
+            w = [b[r][c], b[r+1][c], b[r+2][c], b[r+3][c]];
+            score += scoreWindow(w, p);
+          }
+        }
+        for (r = 0; r < ROWS - 3; r++) {
+          for (c = 0; c < COLS - 3; c++) {
+            w = [b[r][c], b[r+1][c+1], b[r+2][c+2], b[r+3][c+3]];
+            score += scoreWindow(w, p);
+          }
+        }
+        for (r = 0; r < ROWS - 3; r++) {
+          for (c = 3; c < COLS; c++) {
+            w = [b[r][c], b[r+1][c-1], b[r+2][c-2], b[r+3][c-3]];
+            score += scoreWindow(w, p);
+          }
+        }
+        return score;
+      }
+
+      function pickEasy(b) {
+        var cols = legalCols(b);
+        return cols[Math.floor(Math.random() * cols.length)];
+      }
+
+      function immediateWin(b, p) {
+        var cols = legalCols(b), i, placed, win;
+        for (i = 0; i < cols.length; i++) {
+          placed = place(b, cols[i], p);
+          win = lineWinner(placed.board);
+          if (win && win.player === p) return cols[i];
+        }
+        return -1;
+      }
+
+      function pickMedium(b) {
+        var win = immediateWin(b, YELLOW);
+        if (win >= 0) return win;
+        var block = immediateWin(b, RED);
+        if (block >= 0) return block;
+        var i, c;
+        for (i = 0; i < ORDER.length; i++) {
+          c = ORDER[i];
+          if (b[0][c] === 0) return c;
+        }
+        return legalCols(b)[0];
+      }
+
+      function minimax(b, depth, alpha, beta, maximizing) {
+        var win = lineWinner(b);
+        if (win) return win.player === YELLOW ? 100000 + depth : -100000 - depth;
+        if (isFull(b) || depth === 0) return evaluate(b, YELLOW);
+
+        var i, c, placed, val;
+        if (maximizing) {
+          var best = -Infinity;
+          for (i = 0; i < ORDER.length; i++) {
+            c = ORDER[i];
+            if (b[0][c] !== 0) continue;
+            placed = place(b, c, YELLOW);
+            val = minimax(placed.board, depth - 1, alpha, beta, false);
+            if (val > best) best = val;
+            if (val > alpha) alpha = val;
+            if (alpha >= beta) break;
+          }
+          return best;
+        }
+        var worst = Infinity;
+        for (i = 0; i < ORDER.length; i++) {
+          c = ORDER[i];
+          if (b[0][c] !== 0) continue;
+          placed = place(b, c, RED);
+          val = minimax(placed.board, depth - 1, alpha, beta, true);
+          if (val < worst) worst = val;
+          if (val < beta) beta = val;
+          if (alpha >= beta) break;
+        }
+        return worst;
+      }
+
+      function pickHard(b) {
+        var win = immediateWin(b, YELLOW);
+        if (win >= 0) return win;
+        var block = immediateWin(b, RED);
+        if (block >= 0) return block;
+
+        var bestCol = pickMedium(b), bestScore = -Infinity, i, c, placed, val;
+        for (i = 0; i < ORDER.length; i++) {
+          c = ORDER[i];
+          if (b[0][c] !== 0) continue;
+          placed = place(b, c, YELLOW);
+          val = minimax(placed.board, 4, -Infinity, Infinity, false);
+          if (val > bestScore) { bestScore = val; bestCol = c; }
+        }
+        return bestCol;
+      }
+
+      function chooseAI(b) {
+        var level = elLevel.value;
+        if (level === "easy") return pickEasy(b);
+        if (level === "hard") return pickHard(b);
+        return pickMedium(b);
+      }
+
+      function todayStamp() {
+        var d = new Date();
+        var m = d.getMonth() + 1;
+        var day = d.getDate();
+        return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+      }
+
+      function levelLabel() {
+        var v = elLevel.value;
+        return v.charAt(0).toUpperCase() + v.slice(1);
+      }
+
+      function resultText() {
+        var win = lineWinner(board);
+        var outcome = "Draw";
+        if (win) outcome = win.player === RED ? "Red won" : "Yellow won";
+        var grid = [], r, c, row;
+        for (r = 0; r < ROWS; r++) {
+          row = "";
+          for (c = 0; c < COLS; c++) {
+            row += board[r][c] === RED ? "🔴" : board[r][c] === YELLOW ? "🟡" : "⚪";
+          }
+          grid.push(row);
+        }
+        return [
+          "Connect 4 " + todayStamp(),
+          levelLabel() + " · " + outcome,
+          "",
+          grid.join("\n")
+        ].join("\n");
+      }
+
+      function render(dropAt) {
+        var winMap = {};
+        if (winning) {
+          for (var i = 0; i < winning.length; i++) winMap[winning[i][0] + "," + winning[i][1]] = true;
+        }
+        for (var r = 0; r < ROWS; r++) {
+          for (var c = 0; c < COLS; c++) {
+            var cell = cells[r][c];
+            cell.className = winMap[r + "," + c] ? "cell win" : "cell";
+            var v = board[r][c];
+            var existing = cell.querySelector(".disc");
+            if (!v) {
+              if (existing) cell.removeChild(existing);
+              continue;
+            }
+            var color = v === RED ? "red" : "yellow";
+            var isDrop = dropAt && dropAt.r === r && dropAt.c === c;
+            if (!existing || existing.getAttribute("data-color") !== color) {
+              if (existing) cell.removeChild(existing);
+              var d = document.createElement("div");
+              d.className = "disc " + color + (isDrop ? " drop" : "");
+              d.setAttribute("data-color", color);
+              cell.appendChild(d);
+            }
+          }
+        }
+        elUndo.disabled = history.length === 0 || busy;
+        elShare.disabled = !gameOver;
+      }
+
+      function setStatus() {
+        if (gameOver) {
+          if (winning) elStatus.innerHTML = winningPlayer() === RED ? "Red wins" : "Yellow wins";
+          else elStatus.innerHTML = "Draw";
+        } else {
+          elStatus.innerHTML = current === RED ? "Red to move" : "Yellow thinking...";
+        }
+      }
+
+      function winningPlayer() {
+        var w = lineWinner(board);
+        return w ? w.player : 0;
+      }
+
+      function finishIfNeeded() {
+        var w = lineWinner(board);
+        if (w) {
+          gameOver = true;
+          winning = w.cells;
+          elMsg.innerHTML = "Game over — tap Share for a result card";
+          setStatus();
+          render();
+          return true;
+        }
+        if (isFull(board)) {
+          gameOver = true;
+          winning = null;
+          elMsg.innerHTML = "Draw — tap Share for a result card";
+          setStatus();
+          render();
+          return true;
+        }
+        return false;
+      }
+
+      function humanMove(c) {
+        if (gameOver || current !== RED || busy) return;
+        if (board[0][c] !== 0) return;
+        snapshot();
+        var placed = place(board, c, RED);
+        board = placed.board;
+        current = YELLOW;
+        setStatus();
+        render({ r: placed.r, c: placed.c });
+        if (finishIfNeeded()) return;
+        elMsg.innerHTML = "";
+        busy = true;
+        elUndo.disabled = true;
+        setTimeout(aiMove, 280);
+      }
+
+      function aiMove() {
+        if (gameOver || current !== YELLOW) { busy = false; return; }
+        var col = chooseAI(board);
+        var placed = place(board, col, YELLOW);
+        board = placed.board;
+        current = RED;
+        busy = false;
+        setStatus();
+        render({ r: placed.r, c: placed.c });
+        if (finishIfNeeded()) return;
+        elMsg.innerHTML = "";
+        setStatus();
+      }
+
+      function undo() {
+        if (!history.length || busy) return;
+        var prev = history.pop();
+        board = copyBoard(prev.board);
+        current = prev.current;
+        gameOver = prev.gameOver;
+        winning = prev.winning;
+        elMsg.innerHTML = prev.msg;
+        setStatus();
+        render();
+      }
+
+      function shareResult() {
+        if (!gameOver) return;
+        var text = resultText();
+        if (navigator.share) {
+          navigator.share({ title: "Connect 4", text: text }).catch(function () { copyText(text); });
+        } else {
+          copyText(text);
+        }
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            elMsg.innerHTML = "Result copied — paste it anywhere";
+          }).catch(function () { fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+      }
+
+      function fallbackCopy(text) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); elMsg.innerHTML = "Result copied — paste it anywhere"; }
+        catch (e) { alert(text); }
+        document.body.removeChild(area);
+      }
+
+      function buildGrid() {
+        elBoard.innerHTML = "";
+        cells = [];
+        for (var r = 0; r < ROWS; r++) {
+          cells[r] = [];
+          for (var c = 0; c < COLS; c++) {
+            (function (cc) {
+              var cell = document.createElement("div");
+              cell.className = "cell";
+              cell.onclick = function () { humanMove(cc); };
+              elBoard.appendChild(cell);
+              cells[r][cc] = cell;
+            })(c);
+          }
+        }
+      }
+
+      function start() {
+        board = emptyBoard();
+        current = RED;
+        gameOver = false;
+        winning = null;
+        history = [];
+        busy = false;
+        elMsg.innerHTML = "Click a column to drop a disc.";
+        buildGrid();
+        setStatus();
+        render();
+      }
+
+      document.getElementById("restart").onclick = start;
+      elUndo.onclick = undo;
+      elShare.onclick = shareResult;
+      start();
+    })();
+  </script>
+</body>
+</html>
